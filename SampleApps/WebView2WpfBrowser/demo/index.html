@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+
+<head>
+  <title>index</title>
+
+</head>
+
+<body>
+  <h1>hello index</h1>
+  <!-- <button onclick="openWindow('http:\/\/127.0.0.1:8000/new.html')">Open New Window</button> -->
+  <button onclick="openWindow('about:blank')">Open New Window</button>
+  <script>
+    var openedWindow
+    var targetUrl
+
+    // 1. register handlers
+    window.chrome.webview.addEventListener('message', (event) => {
+      // 1.1 navigation
+      if (event.data.includes('AddScriptFinished')) {
+        openedWindow.location.replace(targetUrl);
+      }
+      // 1.2 new window is ready
+      if (event.data.includes('NewWindowLoaded')) {
+        console.log('below is new window context')
+        // 3. using you custom scripts freely
+        console.log(openedWindow['square'])
+        console.log(openedWindow.chrome.webview)
+      }
+    })
+
+    // 2. open a new window
+    function openWindow(url) {
+      openedWindow = window.open('about:blank');
+      targetUrl = url
+    }
+  </script>
+
+</body>
+
+</html>

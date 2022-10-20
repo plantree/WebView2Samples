@@ -128,6 +128,7 @@ namespace WebView2WpfBrowser
             AttachControlEventHandlers(webView);
             // Set background transparent
             // webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
+            var t = InitializeAsync();
         }
 
         public MainWindow(CoreWebView2CreationProperties creationProperties = null)
@@ -138,6 +139,45 @@ namespace WebView2WpfBrowser
             AttachControlEventHandlers(webView);
             // Set background transparent
             // webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
+        }
+
+        public async Task InitializeAsync()
+        {
+            await webView.EnsureCoreWebView2Async();
+            webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+        }
+
+        private async void CoreWebView2_NewWindowRequested(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NewWindowRequestedEventArgs e)
+        {
+            var deferral = e.GetDeferral();
+            Window window = new Window();
+            var newWebView = new WebView2();
+
+            window.Content = newWebView;
+            window.Show();
+
+            await newWebView.EnsureCoreWebView2Async();
+
+            // 1. contains an implicit async navigation
+            e.NewWindow = newWebView.CoreWebView2;
+
+            // 2. add one function to the newWindow, but may be executed after the last step's navigation
+            await newWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync("function square(x) { return x * x; }");
+
+            // 3. add a event handler
+            newWebView.CoreWebView2.NavigationCompleted += CoreWebView2_NavigationCompleted;
+
+            // 4. notify new window to navigate
+            webView.CoreWebView2.PostWebMessageAsString("AddScriptFinished");
+
+            e.Handled = true;
+            deferral.Complete();
+        }
+
+        private void CoreWebView2_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
+        {
+            // 5. notify new window is ready
+            webView.CoreWebView2.PostWebMessageAsString("NewWindowLoaded");
         }
 
         void AttachControlEventHandlers(WebView2 control)
